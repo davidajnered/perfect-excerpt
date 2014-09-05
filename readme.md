@@ -6,4 +6,9 @@ update_option('excerpt_length', 300);
 ```
 The number 300 in this case is the maximum number of words that will be shown.
 
+To bypass Perfect Excerpt you can get the full excerpt by using the $post object.
+```
+$post->post_excerpt;
+```
+
 Happy blogging!

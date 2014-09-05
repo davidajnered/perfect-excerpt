@@ -1,4 +1,8 @@
 <?php
+/**
+ * Perfect Excerpt is a WordPress plugin that shortens your excerpts to whole sentences.
+ * Written by David Ajnered
+ */
 namespace PerfectExcerpt;
 
 class PerfectExcerpt
@@ -8,6 +12,15 @@ class PerfectExcerpt
      * @var int
      */
     private $excerptLength;
+
+    /**
+     * @var array
+     */
+    private $punctuations = [
+        'dot' => '.',
+        'question_mark' => '?',
+        'exclamation_mark' => '!',
+    ];
 
      /**
      * Singleton.
@@ -41,6 +54,7 @@ class PerfectExcerpt
      */
     public function make($excerpt, $length = null)
     {
+        // If length is not passed as argument, use option value or WP default.
         if (!$length) {
             $length = $this->excerptLength;
         }
@@ -53,58 +67,30 @@ class PerfectExcerpt
             return utf8_encode($excerpt);
         }
 
-        // Search for the sentence break closes to the text length, starting at position 0
-        $searching = true;
-        $currentEndOfExcerpt = 0;
-        while ($searching) {
-            // Find end of next sentence
-            $endOfNextSentence = $this->findNextSentenceBreak($excerpt, $currentEndOfExcerpt);
+        $breakPositions = [];
 
-            // Stop searching if end of sentence is bigger than the length
-            if ($endOfNextSentence > $length) {
-                $excerpt = substr($excerpt, 0, $currentEndOfExcerpt);
-                break;
+        // Loop throught all possible break positions and find where they are in the string
+        foreach ($this->punctuations as $punctuation) {
+            $offset = 0;
+            while (($position = strpos($excerpt, $punctuation, $offset)) != false) {
+                // Save break position
+                $breakPositions[] = $position + 1;
+                // Update offset for while loop
+                $offset = $position + 1;
             }
-
-            // Loop still continues so we update the currentEndOfExcerpt to new position
-            $currentEndOfExcerpt = $endOfNextSentence;
         }
 
-        // Restore encoding
+        asort($breakPositions);
+
+        $breakAt = 0;
+        foreach ($breakPositions as $breakPosition) {
+            if ($breakPosition < $length) {
+                $breakAt = $breakPosition;
+            }
+        }
+
+        $excerpt = substr($excerpt, 0, $breakAt);
+
         return utf8_encode($excerpt);
-    }
-
-    /**
-     * Find the next punctuation.
-     *
-     * @param string $excerpt
-     * @param int $offset
-     * @return string
-     */
-    private function findNextSentenceBreak($excerpt, $offset)
-    {
-        $punctuations = [
-            'dot' => '.',
-            'question_mark' => '?',
-            'exclamation_mark' => '!',
-        ];
-
-        // Loop through punctuations and find the first occurrence
-        $break_positions = [];
-        foreach ($punctuations as $punctuation) {
-            // Make sure the punctuation is present
-            if (($break_position = strpos($excerpt, $punctuation, $offset)) !== false) {
-                // Store break position in array
-                $break_positions[] = $break_position + 1;
-            }
-        }
-
-        if (!empty($break_positions)) {
-            // Sort array so the first occurance is at the first position of the array
-            asort($break_positions);
-            return $break_positions[0];
-        } else {
-            return strlen($text);
-        }
     }
 }

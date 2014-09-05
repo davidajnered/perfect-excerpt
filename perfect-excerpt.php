@@ -3,10 +3,9 @@
  * Plugin Name: Perfect Excerpt
  * Version: 1.0
  * Plugin URI: http://davidajnered.com
- * Description: Shorten excerpts to whole sentences.
+ * Description: Perfect Excerpt is a WordPress plugin that shortens your excerpts to whole sentences.
  * Author: David Ajnered
  */
-
 require_once('PerfectExcerpt.php');
 
 /**
