@@ -9,11 +9,13 @@
 require_once('PerfectExcerpt.php');
 
 /**
- * Initialize plugin
+ * Initialize plugin, but only if option perfect_excerpt_disable_auto_init is false or not set at all.
  */
-add_action('init', function () {
-    $perfectExcerpt = PerfectExcerpt\PerfectExcerpt::getObject();
-});
+if (!get_option('perfect_excerpt_disable_auto_init')) {
+    add_action('init', function () {
+        $perfectExcerpt = PerfectExcerpt\PerfectExcerpt::getObject();
+    });
+}
 
 /**
  * Add function to enable developers to programmatically call plugin.
