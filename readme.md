@@ -11,4 +11,9 @@ To bypass Perfect Excerpt you can get the full excerpt by using the $post object
 $post->post_excerpt;
 ```
 
-Happy blogging!
+Add this option to overside auto init.
+```
+update_option('perfect_excerpt_disable_auto_init', true);
+```
+
+Happy writing!
