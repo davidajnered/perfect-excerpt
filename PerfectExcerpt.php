@@ -1,19 +1,20 @@
 <?php
 /**
  * Perfect Excerpt is a WordPress plugin that shortens your excerpts to whole sentences.
- * Written by David Ajnered
+ * Coded by David Ajnered
  */
 namespace PerfectExcerpt;
 
 class PerfectExcerpt
 {
-
     /**
      * @var int
      */
     private $excerptLength;
 
     /**
+     * Array containing all break points. Probably needs to be extended for use with some languages.
+     *
      * @var array
      */
     private $punctuations = [
@@ -22,12 +23,21 @@ class PerfectExcerpt
         'exclamation_mark' => '!',
     ];
 
-     /**
+    /**
+     * Constructor.
+     */
+    private function __construct()
+    {
+        $this->excerptLength = get_option('excerpt_length', 275); // Standard word length (5) multiplied with WP default of 55 words
+        add_filter('the_excerpt', [$this, 'shorten'], 999, 2);
+    }
+
+    /**
      * Singleton.
      *
      * @return PerfectExcerpt
      */
-    public static function getObject()
+    public static function getInstance()
     {
         static $instance;
 
@@ -39,20 +49,13 @@ class PerfectExcerpt
     }
 
     /**
-     * Constructor.
-     */
-    private function __construct()
-    {
-        $this->excerptLength = get_option('excerpt_length', 55);
-        add_filter('the_excerpt', array($this, 'make'), 999, 2);
-    }
-
-    /**
      * Shorten excerpt to the sentence closest to the word length.
      *
      * @param string $excerpt
+     * @param int $length
+     * @return array
      */
-    public function make($excerpt, $length = null)
+    public function shorten($content, $length = null, $includeReadMore = false)
     {
         // If length is not passed as argument, use option value or WP default.
         if (!$length) {
@@ -60,37 +63,107 @@ class PerfectExcerpt
         }
 
         // Remove markup from excerpt. utf8 decode so char count is accurate.
-        $excerpt = utf8_decode(strip_tags($excerpt));
+        $content = utf8_decode(strip_tags($content));
 
-        // If text is shorter than the requested length, return the whole text
-        if (strlen($excerpt) <= $length) {
-            return utf8_encode($excerpt);
+        if (!$this->validate($content, $length)) {
+            return utf8_encode($content);
         }
 
-        $breakPositions = [];
+        $allBreakPoints = $this->findAllBreakPoints($content);
+        $finalBreakPoint = $this->findFinalBreakPoint($allBreakPoints, $length);
+
+        $excerpt = utf8_encode(substr($content, 0, $finalBreakPoint));
+        $extendedExcerpt = utf8_encode(substr($content, $finalBreakPoint));
+
+        if (!$includeReadMore) {
+            return apply_filters('the_content', $excerpt);
+        }
+
+        $extendableExcerpt = $this->getFormattedExtendableExcerpt($excerpt, $extendedExcerpt);
+        return apply_filters('the_content', $extendableExcerpt);
+    }
+
+    /**
+     * Combine and formats the excerpt. Adds a read more link and a wrapped div with the extendable content
+     * not included in the shortened excerpt. The extendable content is hidden with css and displayed by
+     * an click event handler on the read more link.
+     *
+     * @param string $excerpt
+     * @param string $extendedExcerpt
+     * @return string $extendableExcerpt
+     */
+    private function getFormattedExtendableExcerpt($excerpt, $extendedExcerpt)
+    {
+        $extendableExcerpt = '<div class="perfect-excerpt">';
+        $extendableExcerpt .= $excerpt;
+        $extendableExcerpt .= '<div class="extendable-excerpt">';
+        $extendableExcerpt .= '<a class="extendable-excerpt-action" href="#"></a>';
+        $extendableExcerpt .= '<div class="extended-excerpt">' . $extendedExcerpt . '</div>';
+        $extendableExcerpt .= '</div>';
+        $extendableExcerpt .= '</div>';
+
+        return $extendableExcerpt;
+    }
+
+    /**
+     * Validate excerpt length.
+     *
+     * @param string $excerpt
+     * @param int $length
+     * @return boolean
+     */
+    private function validate($excerpt, $length = null)
+    {
+        // If text is shorter than the requested length, return the whole text
+        if (strlen($excerpt) > $length) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Find all possible break points.
+     *
+     * @param string $content
+     * @return arrray $breakPoints
+     */
+    private function findAllBreakPoints($content)
+    {
+        $breakPoints = [];
 
         // Loop throught all possible break positions and find where they are in the string
         foreach ($this->punctuations as $punctuation) {
             $offset = 0;
-            while (($position = strpos($excerpt, $punctuation, $offset)) != false) {
+            while (($position = strpos($content, $punctuation, $offset)) != false) {
                 // Save break position
-                $breakPositions[] = $position + 1;
+                $breakPoints[] = $position + 1;
                 // Update offset for while loop
                 $offset = $position + 1;
             }
         }
 
-        asort($breakPositions);
+        asort($breakPoints);
 
-        $breakAt = 0;
-        foreach ($breakPositions as $breakPosition) {
-            if ($breakPosition < $length) {
-                $breakAt = $breakPosition;
+        return $breakPoints;
+    }
+
+    /**
+     * Find the final break points, the one that's going to be used.
+     *
+     * @param array $allBreakPoints
+     * @param int $length
+     * @return int $finalBreakPoint
+     */
+    private function findFinalBreakPoint($allBreakPoints, $length)
+    {
+        $finalBreakPoint = 0;
+        foreach ($allBreakPoints as $breakPoint) {
+            if ($breakPoint < $length) {
+                $finalBreakPoint = $breakPoint;
             }
         }
 
-        $excerpt = substr($excerpt, 0, $breakAt);
-
-        return utf8_encode($excerpt);
+        return $finalBreakPoint;
     }
 }
