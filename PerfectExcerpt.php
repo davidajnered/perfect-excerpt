@@ -31,8 +31,7 @@ class PerfectExcerpt
         $this->excerptLength = get_option('excerpt_length', 275); // Standard word length (5) multiplied with WP default of 55 words
         add_filter('the_excerpt', [$this, 'shorten'], 999, 2);
         add_filter('admin_init', [$this, 'optionPage']);
-        add_action('wp_footer', [$this, 'addStyleAndScripts']);
-        // add_action('wp_enqueue_scripts', [$this, 'addStyleAndScripts', ['jquery'], false, true);
+        add_action('wp_enqueue_scripts', [$this, 'enqueueStyleAndScripts']);
     }
 
     /**
@@ -198,30 +197,12 @@ class PerfectExcerpt
     }
 
     /**
-     *
+     * Enqueue styles and scripts.
      */
-    public function addStyleAndScripts()
+    public function enqueueStyleAndScripts()
     {
-        echo "
-        <style>
-            .extended-excerpt {
-                display: none;
-            }
-        </style>
-        ";
-
-        echo "
-        <script>
-            jQuery('document').ready(function($) {
-                $('.extendable-excerpt-action').click(function(event) {
-                    event.preventDefault();
-                    var excerpt = $(this).closest('.perfect-excerpt');
-                    excerpt.find('.extendable-excerpt-action').remove();
-                    excerpt.find('.extended-excerpt').fadeIn(1000);
-                });
-            });
-        </script>
-        ";
+        wp_enqueue_style('perfect-excerpt-css', plugins_url('style.css', __FILE__));
+        wp_enqueue_script('perfect-excerpt-js', plugins_url('script.js', __FILE__), ['jquery'], false, true);
     }
 
 }
