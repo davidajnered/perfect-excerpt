@@ -30,6 +30,9 @@ class PerfectExcerpt
     {
         $this->excerptLength = get_option('excerpt_length', 275); // Standard word length (5) multiplied with WP default of 55 words
         add_filter('the_excerpt', [$this, 'shorten'], 999, 2);
+        add_filter('admin_init', [$this, 'optionPage']);
+        add_action('wp_footer', [$this, 'addStyleAndScripts']);
+        // add_action('wp_enqueue_scripts', [$this, 'addStyleAndScripts', ['jquery'], false, true);
     }
 
     /**
@@ -97,7 +100,7 @@ class PerfectExcerpt
         $extendableExcerpt = '<div class="perfect-excerpt">';
         $extendableExcerpt .= $excerpt;
         $extendableExcerpt .= '<div class="extendable-excerpt">';
-        $extendableExcerpt .= '<a class="extendable-excerpt-action" href="#"></a>';
+        $extendableExcerpt .= '<a class="extendable-excerpt-action" href="#">' . get_option('excerpt_text', true) . '</a>';
         $extendableExcerpt .= '<div class="extended-excerpt">' . $extendedExcerpt . '</div>';
         $extendableExcerpt .= '</div>';
         $extendableExcerpt .= '</div>';
@@ -166,4 +169,59 @@ class PerfectExcerpt
 
         return $finalBreakPoint;
     }
+
+    /**
+     * Register options.
+     */
+    public function optionPage()
+    {
+        register_setting('reading', 'excerpt_length', 'intval');
+        register_setting('reading', 'excerpt_text', 'esc_attr');
+        add_settings_field('excerpt_length', 'Perfect excerpt length', [$this, 'perfectExcerptLengthOption'], 'reading');
+        add_settings_field('excerpt_text', 'Perfect excerpt text', [$this, 'perfectExcerptTextOption'], 'reading');
+    }
+
+    /**
+     * Option callback.
+     */
+    public function perfectExcerptLengthOption()
+    {
+        echo '<input type="number" name="excerpt_length" value="' . get_option('excerpt_length', true) . '">';
+    }
+
+    /**
+     * Option callback.
+     */
+    public function perfectExcerptTextOption()
+    {
+        echo '<input type="text" name="excerpt_text" value="' . get_option('excerpt_text', true) . '">';
+    }
+
+    /**
+     *
+     */
+    public function addStyleAndScripts()
+    {
+        echo "
+        <style>
+            .extended-excerpt {
+                display: none;
+            }
+        </style>
+        ";
+
+        echo "
+        <script>
+            jQuery('document').ready(function($) {
+                $('.extendable-excerpt-action').click(function(event) {
+                    event.preventDefault();
+                    var excerpt = $(this).closest('.perfect-excerpt');
+                    excerpt.find('.extendable-excerpt-action').remove();
+                    excerpt.find('.extended-excerpt').fadeIn(1000);
+                });
+            });
+        </script>
+        ";
+    }
+
 }
